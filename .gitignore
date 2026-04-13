@@ -1,0 +1,21 @@
+# Xcode
+.DS_Store
+build/
+DerivedData/
+
+# Secrets / Firebase config
+GoogleService-Info.plist
+
+# Optional if you ever move secrets here
+*.xcconfig
+Secrets.xcconfig
+
+# CocoaPods (if used)
+Pods/
+Podfile.lock
+
+# Swift Package Manager
+.build/
+
+# logs
+*.log
