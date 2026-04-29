@@ -8,11 +8,25 @@
 import SwiftUI
 
 struct WorkoutView: View {
+    let workout: Workout
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        List {
+            Section("Details") {
+                Text(workout.title)
+                Text(workout.timestamp, format: .dateTime.month().day().year().hour().minute())
+
+                if let volume = workout.volume {
+                    Text("Volume: \(volume)")
+                }
+            }
+        }
+        .navigationTitle(workout.title)
     }
 }
 
 #Preview {
-    WorkoutView()
+    NavigationStack {
+        WorkoutView(workout: Workout())
+    }
 }

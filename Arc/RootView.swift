@@ -8,42 +8,23 @@
 import SwiftUI
 
 struct RootView: View {
-    @State var selectedTab: NavigationTab = .home
-    
+    @State private var showSignInView = false
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-        
-        TabView(selection: $selectedTab) {
-            Tab(value: NavigationTab.home) {
-                
-            } label: {
-                Label("Home", systemImage: "house")
-            }
-            
-            Tab(value: NavigationTab.history) {
-                
-            } label: {
-                Label("History", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate")
-            }
-            
-            Tab(value: NavigationTab.food) {
-                
-            } label: {
-                Label("Food", systemImage: "carrot")
-            }
-            
-            Tab(value: NavigationTab.settings) {
-                
-            } label: {
-                Label("Settings", systemImage: "gear")
-            }
-            
-            Tab(value: NavigationTab.workout, role: .search) {
-                
-            } label: {
-                Label("New", systemImage: "plus")
+        NavigationStack {
+            if showSignInView {
+                AuthenticationView(showSignInView: $showSignInView)
+            } else {
+                MainView(showSignInView: $showSignInView)
             }
         }
+        .onAppear {
+            showSignInView = !isUserAuthenticated
+        }
+    }
+
+    private var isUserAuthenticated: Bool {
+        (try? AuthenticationManager.shared.getAuthenticatedUser()) != nil
     }
 }
 

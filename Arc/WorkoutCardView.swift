@@ -8,11 +8,27 @@
 import SwiftUI
 
 struct WorkoutCardView: View {
+    let workout: Workout
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(workout.title)
+                .font(.headline)
+
+            Text(workout.timestamp, format: .dateTime.month().day().year())
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if let volume = workout.volume {
+                Text("Volume: \(volume)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
 #Preview {
-    WorkoutCardView()
+    WorkoutCardView(workout: Workout())
 }

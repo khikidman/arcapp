@@ -6,13 +6,149 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ExerciseListItemView: View {
+    @Bindable var exercise: Exercise
+    var onDelete: () -> Void
+    @State private var isExpanded = true
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: 12) {
+            Button {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    // Chevron (LEFT)
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                isExpanded.toggle()
+                            }
+                        }
+                    
+//                    Spacer()
+
+                    // Title (CENTER / FLEX)
+                    Text(exercise.name)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Spacer()
+                    
+                    // Menu (RIGHT)
+                    Menu {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label("Delete Exercise", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.cyan)
+                            .frame(width: 32, height: 32)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(.black.opacity(0.5))
+                            )
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        isExpanded.toggle()
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+
+//            Divider()
+//                .overlay(.white.opacity(0.15))
+
+            if isExpanded {
+                VStack(spacing: 12) {
+                    List {
+                        ForEach(Array(exercise.sets.enumerated()), id: \.element.persistentModelID) { index, workoutSet in
+                            ExerciseListItemSetView(
+                                workoutSet: workoutSet,
+                                setIndex: index
+                            )
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .padding(.bottom, 4)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteSet(workoutSet)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: CGFloat(exercise.sets.count) * 50)
+
+                    Button {
+                        addSet()
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.cyan)
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(.white.opacity(0.15), lineWidth: 1)
+                )
+        )
+    }
+    
+    private func deleteSet(_ set: WorkoutSet) {
+        exercise.sets.removeAll {
+            $0.persistentModelID == set.persistentModelID
+        }
+    }
+
+    private func addSet() {
+        if let lastSet = exercise.sets.last {
+            exercise.sets.append(
+                WorkoutSet(reps: lastSet.reps, weight: lastSet.weight)
+            )
+            return
+        }
+
+        exercise.sets.append(WorkoutSet(reps: 0, weight: nil))
     }
 }
 
 #Preview {
-    ExerciseListItemView()
+    ExerciseListItemView(
+        exercise: Exercise(
+            name: "Bench Press",
+            sets: [
+                WorkoutSet(reps: 8, weight: 135),
+                WorkoutSet(reps: 6, weight: 155)
+            ]
+        ),
+        onDelete: {}
+    )
 }
