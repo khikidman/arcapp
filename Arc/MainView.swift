@@ -23,11 +23,13 @@ struct MainView: View {
     @State private var selectedWorkout: Workout?
     @State private var menuDestination: MenuDestination?
     @State private var activeWorkout: Workout?
+    @State private var editMode: EditMode = .inactive
     @State private var currentWorkoutSheetDetent: PresentationDetent = .large
     @Environment(\.colorScheme) private var colorScheme
     @State private var showCurrentWorkoutCard = false
     @State private var currentWorkoutLabelExpanded = false
     @State private var currentWorkoutToolbarLabelID = UUID()
+    @AppStorage("home.isVolumeChartHidden") private var isVolumeChartHidden = false
     @Namespace private var currentWorkoutTransitionNamespace
 
     var body: some View {
@@ -39,7 +41,37 @@ struct MainView: View {
                     Color.white.ignoresSafeArea()
                 }
                 List {
-                    WorkoutHistoryChartView()
+                    if isVolumeChartHidden {
+                        Button {
+                            withAnimation {
+                                isVolumeChartHidden = false
+                            }
+                        } label: {
+                            Label("Add Widget", systemImage: "plus")
+                        }
+                    } else {
+                        ZStack(alignment: .topTrailing) {
+                            WorkoutHistoryChartView()
+
+                            if isEditing {
+                                Button {
+                                    withAnimation {
+                                        isVolumeChartHidden = true
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(.red)
+                                        .frame(width: 20, height: 20)
+                                        .clipShape(.circle)
+                                        .accessibilityLabel("Delete volume chart widget")
+                                }
+                                .clipShape(.circle)
+                                .buttonStyle(.glass)
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
                     ForEach(workouts) { workout in
                         WorkoutCardView(workout: workout)
                             .onTapGesture {
@@ -129,7 +161,7 @@ struct MainView: View {
                                 Label("Workout", systemImage: "dumbbell")
                             }
                             Button {
-                                
+
                             } label: {
                                 Label("Food", systemImage: "carrot")
                             }
@@ -145,6 +177,7 @@ struct MainView: View {
                 }
 
         }
+        .environment(\.editMode, $editMode)
         .tint(.cyan)
         .onAppear {
             currentWorkoutToolbarLabelID = UUID()
@@ -206,6 +239,10 @@ struct MainView: View {
 
     private var currentWorkout: Workout? {
         activeWorkout ?? workouts.sorted { $0.timestamp > $1.timestamp }.first
+    }
+
+    private var isEditing: Bool {
+        editMode.isEditing
     }
 
     private var recordBookView: some View {
