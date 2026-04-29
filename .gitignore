@@ -10,6 +10,9 @@ GoogleService-Info.plist
 *.xcconfig
 Secrets.xcconfig
 
+*.xcuserstate
+xcuserdata/
+
 # CocoaPods (if used)
 Pods/
 Podfile.lock
