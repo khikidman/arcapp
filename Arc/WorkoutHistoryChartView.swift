@@ -134,7 +134,11 @@ struct WorkoutHistoryChartView: View {
                     AxisMarks(values: .stride(by: .month)) { value in
                         AxisGridLine()
                         AxisTick()
-                        AxisValueLabel(format: .dateTime.month(.abbreviated))
+                        AxisValueLabel(
+                            format: .dateTime.month(.abbreviated),
+                            centered: false,
+                            anchor: .topTrailing
+                        )
                     }
                 }
                 .chartYAxis {

@@ -126,7 +126,9 @@ struct CurrentWorkoutSheetView: View {
         }
         .sheet(isPresented: $showAddExerciseSheet) {
             NavigationStack {
-                AddExerciseView()
+                AddExerciseView { exerciseName in
+                    workout.exercises.append(Exercise(name: exerciseName))
+                }
                     .navigationTitle("Add Exercise")
                     .navigationBarTitleDisplayMode(.inline)
             }

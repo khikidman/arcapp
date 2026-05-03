@@ -203,6 +203,8 @@ struct SettingsView: View {
                     return "Email"
                 case .google:
                     return "Google"
+                case .apple:
+                    return "Apple"
                 }
             }
             .joined(separator: ", ")
