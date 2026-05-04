@@ -19,5 +19,6 @@ struct ArcApp: App {
         WindowGroup {
             RootView()
         }
+        .modelContainer(for: [Workout.self, Exercise.self, WorkoutSet.self])
     }
 }

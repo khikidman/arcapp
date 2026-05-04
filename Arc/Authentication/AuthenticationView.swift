@@ -16,6 +16,8 @@ private let providerSignInButtonCornerRadius: CGFloat = 8
 struct AuthenticationView: View {
     
     @State private var authVM = AuthenticationViewModel()
+    @StateObject private var emailViewModel = SignInEmailViewModel()
+    @State private var showsEmailFields = false
     @Binding var showSignInView: Bool
     
     var body: some View {
@@ -31,16 +33,52 @@ struct AuthenticationView: View {
                 Spacer()
                 AuthenticationLogoHeader()
 
-                NavigationLink {
-                    SignInEmailView(showSignInView: $showSignInView)
-                } label: {
-                    Text("Sign In With Email")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(height: 55)
-                        .frame(maxWidth: .infinity)
-                        .background(LinearGradient(colors: [.cyan, .blue.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                VStack(spacing: 14) {
+                    if showsEmailFields {
+                        TextField("", text: $emailViewModel.email, prompt: Text("Email"))
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.emailAddress)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 14)
+                            .frame(height: 48)
+                            .foregroundStyle(.white)
+                            .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(.white.opacity(0.18), lineWidth: 1)
+                            )
+
+                        SecureField("Password", text: $emailViewModel.password)
+                            .padding(.horizontal, 14)
+                            .frame(height: 48)
+                            .foregroundStyle(.white)
+                            .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(.white.opacity(0.18), lineWidth: 1)
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+
+                    Button {
+                        if showsEmailFields {
+                            Task {
+                                await signInWithEmail()
+                            }
+                        } else {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                                showsEmailFields = true
+                            }
+                        }
+                    } label: {
+                        Text("Sign In With Email")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(height: 55)
+                            .frame(maxWidth: .infinity)
+                            .background(LinearGradient(colors: [.cyan, .blue.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                 }
                 HStack {
                     VStack {
@@ -103,6 +141,23 @@ struct AuthenticationView: View {
                 Spacer()
             }
             .padding(35)
+        }
+    }
+
+    private func signInWithEmail() async {
+        do {
+            try await emailViewModel.signUp()
+            showSignInView = false
+            return
+        } catch {
+            print(error)
+        }
+
+        do {
+            try await emailViewModel.signIn()
+            showSignInView = false
+        } catch {
+            print(error)
         }
     }
 }

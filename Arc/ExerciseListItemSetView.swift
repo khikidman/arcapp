@@ -11,6 +11,7 @@ import SwiftData
 struct ExerciseListItemSetView: View {
     @Bindable var workoutSet: WorkoutSet
     let setIndex: Int
+    var onActivityChanged: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 12) {
@@ -62,6 +63,7 @@ struct ExerciseListItemSetView: View {
                 .frame(maxWidth: .infinity)
 
             Button {
+                onActivityChanged()
                 workoutSet.isCompleted.toggle()
             } label: {
                 Image(systemName: workoutSet.isCompleted ? "checkmark" : "checkmark")
@@ -82,6 +84,7 @@ struct ExerciseListItemSetView: View {
         Binding(
             get: { workoutSet.weight.map(String.init) ?? "" },
             set: { newValue in
+                onActivityChanged()
                 workoutSet.weight = Int(newValue)
             }
         )
@@ -91,6 +94,7 @@ struct ExerciseListItemSetView: View {
         Binding(
             get: { String(workoutSet.reps) },
             set: { newValue in
+                onActivityChanged()
                 if let reps = Int(newValue) {
                     workoutSet.reps = reps
                 } else if newValue.isEmpty {
@@ -104,6 +108,7 @@ struct ExerciseListItemSetView: View {
 #Preview {
     ExerciseListItemSetView(
         workoutSet: WorkoutSet(reps: 8, weight: 135),
-        setIndex: 0
+        setIndex: 0,
+        onActivityChanged: {}
     )
 }

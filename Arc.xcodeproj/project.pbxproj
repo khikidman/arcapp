@@ -14,6 +14,7 @@
 		479861A72F9C26AD0034E34D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 479861A62F9C26AD0034E34D /* FirebaseFirestore */; };
 		479861A92F9C26AD0034E34D /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 479861A82F9C26AD0034E34D /* FirebaseMessaging */; };
 		479861AB2F9C26AD0034E34D /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 479861AA2F9C26AD0034E34D /* FirebaseStorage */; };
+		47A100012FA0000000000001 /* ArcWorkoutLiveActivity.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 47A100022FA0000000000001 /* ArcWorkoutLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,15 +32,44 @@
 			remoteGlobalIDString = 475163A52E3179070058DE9F;
 			remoteInfo = Arc;
 		};
+		47A100032FA0000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4751639E2E3179070058DE9F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 47A1000A2FA0000000000001;
+			remoteInfo = ArcWorkoutLiveActivity;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		47A100082FA0000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				47A100012FA0000000000001 /* ArcWorkoutLiveActivity.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		475163A62E3179070058DE9F /* Arc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arc.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		475163B52E31790A0058DE9F /* ArcTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArcTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		475163BF2E31790A0058DE9F /* ArcUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArcUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		47A100022FA0000000000001 /* ArcWorkoutLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArcWorkoutLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		47A1000E2FA0000000000001 /* Exceptions for "ArcWorkoutLiveActivity" folder in "ArcWorkoutLiveActivity" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 47A1000A2FA0000000000001 /* ArcWorkoutLiveActivity */;
+		};
 		47C2BFB82F8C968C007B2F92 /* Exceptions for "Arc" folder in "Arc" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -66,6 +96,14 @@
 		475163C22E31790A0058DE9F /* ArcUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ArcUITests;
+			sourceTree = "<group>";
+		};
+		47A100042FA0000000000001 /* ArcWorkoutLiveActivity */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				47A1000E2FA0000000000001 /* Exceptions for "ArcWorkoutLiveActivity" folder in "ArcWorkoutLiveActivity" target */,
+			);
+			path = ArcWorkoutLiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -99,6 +137,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		47A100052FA0000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -106,6 +151,7 @@
 			isa = PBXGroup;
 			children = (
 				475163A82E3179070058DE9F /* Arc */,
+				47A100042FA0000000000001 /* ArcWorkoutLiveActivity */,
 				475163B82E31790A0058DE9F /* ArcTests */,
 				475163C22E31790A0058DE9F /* ArcUITests */,
 				475163A72E3179070058DE9F /* Products */,
@@ -116,6 +162,7 @@
 			isa = PBXGroup;
 			children = (
 				475163A62E3179070058DE9F /* Arc.app */,
+				47A100022FA0000000000001 /* ArcWorkoutLiveActivity.appex */,
 				475163B52E31790A0058DE9F /* ArcTests.xctest */,
 				475163BF2E31790A0058DE9F /* ArcUITests.xctest */,
 			);
@@ -132,10 +179,12 @@
 				475163A22E3179070058DE9F /* Sources */,
 				475163A32E3179070058DE9F /* Frameworks */,
 				475163A42E3179070058DE9F /* Resources */,
+				47A100082FA0000000000001 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				47A100092FA0000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				475163A82E3179070058DE9F /* Arc */,
@@ -200,6 +249,28 @@
 			productReference = 475163BF2E31790A0058DE9F /* ArcUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		47A1000A2FA0000000000001 /* ArcWorkoutLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 47A1000D2FA0000000000001 /* Build configuration list for PBXNativeTarget "ArcWorkoutLiveActivity" */;
+			buildPhases = (
+				47A100072FA0000000000001 /* Sources */,
+				47A100052FA0000000000001 /* Frameworks */,
+				47A100062FA0000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				47A100042FA0000000000001 /* ArcWorkoutLiveActivity */,
+			);
+			name = ArcWorkoutLiveActivity;
+			packageProductDependencies = (
+			);
+			productName = ArcWorkoutLiveActivity;
+			productReference = 47A100022FA0000000000001 /* ArcWorkoutLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -220,6 +291,9 @@
 					475163BE2E31790A0058DE9F = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 475163A52E3179070058DE9F;
+					};
+					47A1000A2FA0000000000001 = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -242,6 +316,7 @@
 			projectRoot = "";
 			targets = (
 				475163A52E3179070058DE9F /* Arc */,
+				47A1000A2FA0000000000001 /* ArcWorkoutLiveActivity */,
 				475163B42E31790A0058DE9F /* ArcTests */,
 				475163BE2E31790A0058DE9F /* ArcUITests */,
 			);
@@ -264,6 +339,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		475163BD2E31790A0058DE9F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		47A100062FA0000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -294,6 +376,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		47A100072FA0000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -306,6 +395,11 @@
 			isa = PBXTargetDependency;
 			target = 475163A52E3179070058DE9F /* Arc */;
 			targetProxy = 475163C02E31790A0058DE9F /* PBXContainerItemProxy */;
+		};
+		47A100092FA0000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 47A1000A2FA0000000000001 /* ArcWorkoutLiveActivity */;
+			targetProxy = 47A100032FA0000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -583,6 +677,66 @@
 			};
 			name = Release;
 		};
+		47A1000B2FA0000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C864X43Y57;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ArcWorkoutLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = khikidman.Arc.ArcWorkoutLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		47A1000C2FA0000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C864X43Y57;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ArcWorkoutLiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = khikidman.Arc.ArcWorkoutLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -618,6 +772,15 @@
 			buildConfigurations = (
 				475163D02E31790A0058DE9F /* Debug */,
 				475163D12E31790A0058DE9F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		47A1000D2FA0000000000001 /* Build configuration list for PBXNativeTarget "ArcWorkoutLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				47A1000B2FA0000000000001 /* Debug */,
+				47A1000C2FA0000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

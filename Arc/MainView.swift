@@ -19,6 +19,7 @@ struct MainView: View {
 
     private enum HomeWidget: String, CaseIterable, Identifiable {
         case volumeChart
+        case recentWorkouts
         case weeklyWorkouts
         case weeklyVolume
         case workoutStreak
@@ -30,6 +31,8 @@ struct MainView: View {
             switch self {
             case .volumeChart:
                 "Volume Chart"
+            case .recentWorkouts:
+                "Recent Workouts"
             case .weeklyWorkouts:
                 "This Week"
             case .weeklyVolume:
@@ -45,6 +48,8 @@ struct MainView: View {
             switch self {
             case .volumeChart:
                 "chart.xyaxis.line"
+            case .recentWorkouts:
+                "clock.arrow.circlepath"
             case .weeklyWorkouts:
                 "calendar"
             case .weeklyVolume:
@@ -57,7 +62,12 @@ struct MainView: View {
         }
 
         var isSmall: Bool {
-            self != .volumeChart
+            switch self {
+            case .volumeChart, .recentWorkouts:
+                false
+            default:
+                true
+            }
         }
     }
 
@@ -69,12 +79,15 @@ struct MainView: View {
     @State private var activeWorkout: Workout?
     @State private var editMode: EditMode = .inactive
     @State private var currentWorkoutSheetDetent: PresentationDetent = .large
+    @State private var workoutSyncError: String?
+    @State private var didHydrateWorkouts = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var showCurrentWorkoutCard = false
     @State private var currentWorkoutLabelExpanded = false
     @State private var currentWorkoutToolbarLabelID = UUID()
     @AppStorage("settings.weightUnit") private var weightUnit = "lb"
     @AppStorage("home.isVolumeChartHidden") private var isVolumeChartHidden = false
+    @AppStorage("home.isRecentWorkoutsHidden") private var isRecentWorkoutsHidden = false
     @AppStorage("home.isWeeklyWorkoutsHidden") private var isWeeklyWorkoutsHidden = false
     @AppStorage("home.isWeeklyVolumeHidden") private var isWeeklyVolumeHidden = false
     @AppStorage("home.isWorkoutStreakHidden") private var isWorkoutStreakHidden = false
@@ -94,6 +107,10 @@ struct MainView: View {
                         smallWidgetGrid
                     }
 
+                    if !isHomeWidgetHidden(.recentWorkouts) {
+                        recentWorkoutsWidget
+                    }
+
                     if !isHomeWidgetHidden(.volumeChart) {
                         ZStack(alignment: .topTrailing) {
                             WorkoutHistoryChartView()
@@ -104,23 +121,15 @@ struct MainView: View {
                                     .padding(8)
                             }
                         }
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(Color.cyan.opacity(0.18), lineWidth: 1)
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     }
-                    ForEach(workouts) { workout in
-                        WorkoutCardView(workout: workout)
-                            .onTapGesture {
-                                selectedWorkout = workout
-                            }
-                    }
-                    .onDelete(perform: deleteItems)
-
                     if isEditing && !hiddenHomeWidgets.isEmpty {
                         addWidgetMenu
                     }
@@ -232,14 +241,20 @@ struct MainView: View {
                 currentWorkoutLabelExpanded = true
             }
         }
+        .task {
+            await hydrateLocalWorkoutsFromFirestoreIfNeeded()
+        }
         .sheet(isPresented: $showCurrentWorkoutCard) {
             if let workout = currentWorkout {
                 CurrentWorkoutSheetView(
                     workout: workout,
                     onClose: closeCurrentWorkoutCard,
+                    onCancelWorkout: cancelCurrentWorkout,
                     onOpenWorkout: {
-                        selectedWorkout = workout
-                        closeCurrentWorkoutCard()
+                        completeCurrentWorkout(workout)
+                    },
+                    onActivityChanged: { kind in
+                        updateWorkoutLiveActivity(for: kind)
                     }
                 )
                     .navigationTransition(.zoom(sourceID: currentWorkoutTransitionID, in: currentWorkoutTransitionNamespace))
@@ -248,6 +263,14 @@ struct MainView: View {
                     .presentationContentInteraction(.resizes)
                     .presentationBackground(.ultraThinMaterial)
             }
+        }
+        .alert("Sync Delayed", isPresented: Binding(
+            get: { workoutSyncError != nil },
+            set: { if !$0 { workoutSyncError = nil } }
+        )) {
+            Button("OK", role: .cancel) { workoutSyncError = nil }
+        } message: {
+            Text("Your workout is saved locally. Firebase sync can retry later. \(workoutSyncError ?? "Try again later.")")
         }
     }
 
@@ -261,9 +284,10 @@ struct MainView: View {
         }
 
         withAnimation {
-            let newItem = Workout(timestamp: Date(), title: "Current Workout", volume: 0)
+            let newItem = Workout(timestamp: Date(), title: "Current Workout", volume: 0, isCompleted: false)
             modelContext.insert(newItem)
             activeWorkout = newItem
+            startWorkoutLiveActivity(for: newItem)
             currentWorkoutSheetDetent = .large
             showCurrentWorkoutCard = true
         }
@@ -272,18 +296,145 @@ struct MainView: View {
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                let workout = workouts[index]
+                let workout = completedWorkouts[index]
+                let workoutId = workout.id.uuidString
                 if activeWorkout === workout {
+                    WorkoutLiveActivityManager.end(workoutID: workoutId)
                     activeWorkout = nil
                     showCurrentWorkoutCard = false
                 }
                 modelContext.delete(workout)
+                Task {
+                    try? await WorkoutStorageManager.shared.deleteWorkout(workoutId: workoutId)
+                }
             }
         }
     }
 
+    private func cancelCurrentWorkout() {
+        guard let workout = activeWorkout else {
+            closeCurrentWorkoutCard()
+            return
+        }
+
+        withAnimation {
+            activeWorkout = nil
+            showCurrentWorkoutCard = false
+            currentWorkoutLabelExpanded = false
+            modelContext.delete(workout)
+        }
+
+        let workoutId = workout.id.uuidString
+        WorkoutLiveActivityManager.end(workoutID: workoutId)
+
+        Task {
+            try? await WorkoutStorageManager.shared.deleteWorkout(workoutId: workoutId)
+        }
+    }
+
+    private func completeCurrentWorkout(_ workout: Workout) {
+        workout.volume = workout.strengthVolume
+        workout.isCompleted = true
+        let workoutId = workout.id.uuidString
+
+        withAnimation {
+            if activeWorkout === workout {
+                activeWorkout = nil
+            }
+
+            WorkoutLiveActivityManager.end(workoutID: workoutId)
+            showCurrentWorkoutCard = false
+            currentWorkoutLabelExpanded = false
+            selectedWorkout = workout
+        }
+
+        Task {
+            do {
+                try await WorkoutStorageManager.shared.saveWorkout(workout)
+            } catch {
+                await MainActor.run {
+                    workoutSyncError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func startWorkoutLiveActivity(for workout: Workout) {
+        WorkoutLiveActivityManager.start(
+            workoutID: workout.id.uuidString,
+            startedAt: workout.timestamp,
+            indicator: mostRecentLiveActivityIndicator(for: workout)
+        )
+    }
+
+    private func updateWorkoutLiveActivity(for kind: ExerciseKind) {
+        guard let workout = activeWorkout else { return }
+
+        WorkoutLiveActivityManager.update(
+            workoutID: workout.id.uuidString,
+            startedAt: workout.timestamp,
+            indicator: WorkoutLiveActivityIndicator(exerciseKind: kind)
+        )
+    }
+
+    private func mostRecentLiveActivityIndicator(for workout: Workout) -> WorkoutLiveActivityIndicator {
+        guard let exercise = workout.exercises.last else {
+            return .strength
+        }
+
+        return WorkoutLiveActivityIndicator(exerciseKind: exercise.kind)
+    }
+
+    @MainActor
+    private func hydrateLocalWorkoutsFromFirestoreIfNeeded() async {
+        guard !didHydrateWorkouts else { return }
+        didHydrateWorkouts = true
+
+        do {
+            let remoteWorkouts = try await WorkoutStorageManager.shared.getRecentWorkouts(limit: 200)
+            upsert(remoteWorkouts: remoteWorkouts)
+        } catch {
+            workoutSyncError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func upsert(remoteWorkouts: [DBWorkout]) {
+        let localWorkoutsById = workouts.reduce(into: [String: Workout]()) { result, workout in
+            result[workout.id.uuidString] = workout
+        }
+
+        for remoteWorkout in remoteWorkouts {
+            if let localWorkout = localWorkoutsById[remoteWorkout.id] {
+                update(localWorkout, from: remoteWorkout)
+            } else {
+                modelContext.insert(remoteWorkout.makeLocalWorkout())
+            }
+        }
+    }
+
+    @MainActor
+    private func update(_ workout: Workout, from remoteWorkout: DBWorkout) {
+        workout.title = remoteWorkout.title
+        workout.timestamp = remoteWorkout.startedAt
+        workout.volume = remoteWorkout.totalVolume
+        workout.isCompleted = true
+        workout.lastSyncedAt = remoteWorkout.updatedAt
+
+        for exercise in workout.exercises {
+            modelContext.delete(exercise)
+        }
+        workout.exercises = remoteWorkout.exercises.map { $0.makeLocalExercise() }
+    }
+
     private var currentWorkout: Workout? {
         activeWorkout ?? workouts.sorted { $0.timestamp > $1.timestamp }.first
+    }
+
+    private var completedWorkouts: [Workout] {
+        workouts
+            .filter(\.isCompleted)
+            .sorted { $0.timestamp > $1.timestamp }
     }
 
     private var calendar: Calendar {
@@ -309,7 +460,7 @@ struct MainView: View {
             return []
         }
 
-        return workouts.filter { workout in
+        return completedWorkouts.filter { workout in
             workout.timestamp >= week.start && workout.timestamp < week.end
         }
     }
@@ -321,7 +472,7 @@ struct MainView: View {
     }
 
     private var workoutStreak: Int {
-        let workoutDays = Set(workouts.map { calendar.startOfDay(for: $0.timestamp) })
+        let workoutDays = Set(completedWorkouts.map { calendar.startOfDay(for: $0.timestamp) })
         guard var day = workoutDays.max() else {
             return 0
         }
@@ -339,7 +490,11 @@ struct MainView: View {
     }
 
     private var lastWorkout: Workout? {
-        workouts.max { $0.timestamp < $1.timestamp }
+        completedWorkouts.max { $0.timestamp < $1.timestamp }
+    }
+
+    private var recentWorkouts: [Workout] {
+        Array(completedWorkouts.prefix(3))
     }
 
     private var addWidgetMenu: some View {
@@ -386,6 +541,27 @@ struct MainView: View {
         .listRowBackground(Color.clear)
     }
 
+    private var recentWorkoutsWidget: some View {
+        HomeRecentWorkoutsWidget(
+            workouts: recentWorkouts,
+            isEditing: isEditing,
+            onOpenHistory: {
+                menuDestination = .history
+            },
+            onOpenWorkout: { workout in
+                selectedWorkout = workout
+            },
+            onDelete: {
+                withAnimation {
+                    setHomeWidget(.recentWorkouts, hidden: true)
+                }
+            }
+        )
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+
     private func smallWidgetView(_ widget: HomeWidget) -> some View {
         HomeStatWidget(
             title: widget.title,
@@ -423,6 +599,8 @@ struct MainView: View {
         switch widget {
         case .volumeChart:
             isVolumeChartHidden
+        case .recentWorkouts:
+            isRecentWorkoutsHidden
         case .weeklyWorkouts:
             isWeeklyWorkoutsHidden
         case .weeklyVolume:
@@ -438,6 +616,8 @@ struct MainView: View {
         switch widget {
         case .volumeChart:
             isVolumeChartHidden = hidden
+        case .recentWorkouts:
+            isRecentWorkoutsHidden = hidden
         case .weeklyWorkouts:
             isWeeklyWorkoutsHidden = hidden
         case .weeklyVolume:
@@ -453,6 +633,8 @@ struct MainView: View {
         return switch widget {
         case .volumeChart:
             ""
+        case .recentWorkouts:
+            "\(recentWorkouts.count)"
         case .weeklyWorkouts:
             "\(workoutsThisWeek.count)"
         case .weeklyVolume:
@@ -468,6 +650,8 @@ struct MainView: View {
         return switch widget {
         case .volumeChart:
             ""
+        case .recentWorkouts:
+            recentWorkouts.count == 1 ? "workout" : "workouts"
         case .weeklyWorkouts:
             workoutsThisWeek.count == 1 ? "workout" : "workouts"
         case .weeklyVolume:
@@ -480,18 +664,7 @@ struct MainView: View {
     }
 
     private func tint(for widget: HomeWidget) -> Color {
-        return switch widget {
-        case .volumeChart:
-            .cyan
-        case .weeklyWorkouts:
-            .cyan
-        case .weeklyVolume:
-            .green
-        case .workoutStreak:
-            .orange
-        case .lastWorkout:
-            .red
-        }
+        .cyan
     }
 
     private func shortDateLabel(for date: Date) -> String {
@@ -507,9 +680,7 @@ struct MainView: View {
     }
 
     private var recordBookView: some View {
-        Text("Record Book coming soon")
-            .navigationTitle("Record Book")
-            .navigationBarTitleDisplayMode(.inline)
+        RecordBookView()
     }
 
     @ViewBuilder
@@ -538,7 +709,122 @@ struct MainView: View {
 
 #Preview {
     MainView(showSignInView: .constant(false))
-        .modelContainer(for: Workout.self, inMemory: true)
+        .modelContainer(for: [Workout.self, Exercise.self, WorkoutSet.self], inMemory: true)
+}
+
+private struct HomeRecentWorkoutsWidget: View {
+    let workouts: [Workout]
+    let isEditing: Bool
+    let onOpenHistory: () -> Void
+    let onOpenWorkout: (Workout) -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                Button {
+                    onOpenHistory()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.cyan)
+                            .frame(width: 28, height: 28)
+
+                        Text("Recent Workouts")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if workouts.isEmpty {
+                    Text("No workouts yet")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(workouts) { workout in
+                            Button {
+                                onOpenWorkout(workout)
+                            } label: {
+                                RecentWorkoutWidgetRow(workout: workout)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.cyan.opacity(0.18), lineWidth: 1)
+            }
+
+            if isEditing {
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.red)
+                        .frame(width: 20, height: 20)
+                        .clipShape(.circle)
+                        .accessibilityLabel("Delete Recent Workouts widget")
+                }
+                .clipShape(.circle)
+                .buttonStyle(.glass)
+                .padding(8)
+            }
+        }
+    }
+}
+
+private struct RecentWorkoutWidgetRow: View {
+    let workout: Workout
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(workout.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+
+                HStack(spacing: 10) {
+                    Text(workout.timestamp, format: .dateTime.month(.abbreviated).day())
+
+                    if workout.strengthVolume > 0 {
+                        Label(workout.strengthVolume.formatted(), systemImage: "scalemass")
+                    }
+
+                    if workout.exercises.contains(where: { $0.kind == .cardio }) {
+                        Label("Cardio", systemImage: "figure.run")
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .background(.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 }
 
 private struct HomeStatWidget: View {
@@ -579,9 +865,9 @@ private struct HomeStatWidget: View {
             }
             .frame(maxWidth: .infinity, minHeight: 106, alignment: .leading)
             .padding(12)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(tint.opacity(0.18), lineWidth: 1)
             }
 

@@ -10,6 +10,7 @@ import SwiftData
 
 struct ExerciseListItemView: View {
     @Bindable var exercise: Exercise
+    var onActivityChanged: () -> Void = {}
     var onDelete: () -> Void
     @State private var isExpanded = true
 
@@ -73,42 +74,51 @@ struct ExerciseListItemView: View {
 //                .overlay(.white.opacity(0.15))
 
             if isExpanded {
-                VStack(spacing: 12) {
-                    List {
-                        ForEach(Array(exercise.sets.enumerated()), id: \.element.persistentModelID) { index, workoutSet in
-                            ExerciseListItemSetView(
-                                workoutSet: workoutSet,
-                                setIndex: index
-                            )
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                            .padding(.bottom, 4)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    deleteSet(workoutSet)
-                                } label: {
-                                    Image(systemName: "trash")
+                if exercise.kind == .cardio {
+                    CardioExerciseMetricsView(
+                        exercise: exercise,
+                        onActivityChanged: onActivityChanged
+                    )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                } else {
+                    VStack(spacing: 12) {
+                        List {
+                            ForEach(Array(exercise.sets.enumerated()), id: \.element.persistentModelID) { index, workoutSet in
+                                ExerciseListItemSetView(
+                                    workoutSet: workoutSet,
+                                    setIndex: index,
+                                    onActivityChanged: onActivityChanged
+                                )
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .padding(.bottom, 4)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        deleteSet(workoutSet)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                    }
                                 }
                             }
                         }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .frame(height: CGFloat(exercise.sets.count) * 50)
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .frame(height: CGFloat(exercise.sets.count) * 50)
 
-                    Button {
-                        addSet()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.cyan)
-                            .frame(width: 32, height: 32)
+                        Button {
+                            addSet()
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.cyan)
+                                .frame(width: 32, height: 32)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(16)
@@ -129,6 +139,8 @@ struct ExerciseListItemView: View {
     }
 
     private func addSet() {
+        onActivityChanged()
+
         if let lastSet = exercise.sets.last {
             exercise.sets.append(
                 WorkoutSet(reps: lastSet.reps, weight: lastSet.weight)
@@ -137,6 +149,89 @@ struct ExerciseListItemView: View {
         }
 
         exercise.sets.append(WorkoutSet(reps: 0, weight: nil))
+    }
+}
+
+private struct CardioExerciseMetricsView: View {
+    @Bindable var exercise: Exercise
+    let onActivityChanged: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Cardio")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                metricField("min", text: durationMinutesText, keyboardType: .numberPad)
+                metricField("mi", text: distanceText, keyboardType: .decimalPad)
+                metricField("cal", text: caloriesText, keyboardType: .numberPad)
+            }
+        }
+    }
+
+    private func metricField(
+        _ placeholder: String,
+        text: Binding<String>,
+        keyboardType: UIKeyboardType
+    ) -> some View {
+        TextField(placeholder, text: text)
+            .keyboardType(keyboardType)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 10)
+            .frame(height: 38)
+            .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var durationMinutesText: Binding<String> {
+        Binding(
+            get: {
+                guard let seconds = exercise.cardioDurationSeconds, seconds > 0 else { return "" }
+                return String(seconds / 60)
+            },
+            set: { newValue in
+                onActivityChanged()
+
+                if let minutes = Int(newValue) {
+                    exercise.cardioDurationSeconds = minutes * 60
+                } else if newValue.isEmpty {
+                    exercise.cardioDurationSeconds = nil
+                }
+            }
+        )
+    }
+
+    private var distanceText: Binding<String> {
+        Binding(
+            get: {
+                guard let distance = exercise.cardioDistance else { return "" }
+                return distance.formatted(.number.precision(.fractionLength(0...2)))
+            },
+            set: { newValue in
+                onActivityChanged()
+
+                if let distance = Double(newValue) {
+                    exercise.cardioDistance = distance
+                } else if newValue.isEmpty {
+                    exercise.cardioDistance = nil
+                }
+            }
+        )
+    }
+
+    private var caloriesText: Binding<String> {
+        Binding(
+            get: { exercise.cardioCalories.map(String.init) ?? "" },
+            set: { newValue in
+                onActivityChanged()
+
+                if let calories = Int(newValue) {
+                    exercise.cardioCalories = calories
+                } else if newValue.isEmpty {
+                    exercise.cardioCalories = nil
+                }
+            }
+        )
     }
 }
 

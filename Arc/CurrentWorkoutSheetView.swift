@@ -11,7 +11,9 @@ import SwiftData
 struct CurrentWorkoutSheetView: View {
     @Bindable var workout: Workout
     let onClose: () -> Void
+    let onCancelWorkout: () -> Void
     let onOpenWorkout: () -> Void
+    let onActivityChanged: (ExerciseKind) -> Void
     @State private var showAddExerciseSheet = false
 
     var body: some View {
@@ -29,7 +31,7 @@ struct CurrentWorkoutSheetView: View {
 
                     HStack {
                         Button() {
-                            onClose()
+                            onCancelWorkout()
                         } label: {
                             Text("Cancel")
                                 .padding(6)
@@ -55,8 +57,11 @@ struct CurrentWorkoutSheetView: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text(workout.title)
+                    TextField("Workout title", text: $workout.title)
                         .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
@@ -84,6 +89,9 @@ struct CurrentWorkoutSheetView: View {
                         ForEach(workout.exercises, id: \.persistentModelID) { exercise in
                             ExerciseListItemView(
                                 exercise: exercise,
+                                onActivityChanged: {
+                                    onActivityChanged(exercise.kind)
+                                },
                                 onDelete: {
                                     if let index = workout.exercises.firstIndex(where: {
                                         $0.persistentModelID == exercise.persistentModelID
@@ -126,8 +134,15 @@ struct CurrentWorkoutSheetView: View {
         }
         .sheet(isPresented: $showAddExerciseSheet) {
             NavigationStack {
-                AddExerciseView { exerciseName in
-                    workout.exercises.append(Exercise(name: exerciseName))
+                AddExerciseView { exercise in
+                    workout.exercises.append(
+                        Exercise(
+                            name: exercise.name,
+                            kind: exercise.kind,
+                            muscleGroup: exercise.groupName
+                        )
+                    )
+                    onActivityChanged(exercise.kind)
                 }
                     .navigationTitle("Add Exercise")
                     .navigationBarTitleDisplayMode(.inline)
@@ -144,6 +159,8 @@ struct CurrentWorkoutSheetView: View {
         workout.exercises.append(
             Exercise(
                 name: "Incline Dumbbell Press",
+                kind: .strength,
+                muscleGroup: "Chest",
                 sets: [
                     WorkoutSet(reps: 10, weight: 60),
                     WorkoutSet(reps: 8, weight: 65),
@@ -178,6 +195,8 @@ private struct WorkoutSheetTimer: View {
     CurrentWorkoutSheetView(
         workout: Workout(),
         onClose: {},
-        onOpenWorkout: {}
+        onCancelWorkout: {},
+        onOpenWorkout: {},
+        onActivityChanged: { _ in }
     )
 }

@@ -8,12 +8,15 @@
 import SwiftUI
 
 struct WorkoutView: View {
-    let workout: Workout
+    @Bindable var workout: Workout
 
     var body: some View {
         List {
             Section("Details") {
-                Text(workout.title)
+                TextField("Workout title", text: $workout.title)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.done)
+
                 Text(workout.timestamp, format: .dateTime.month().day().year().hour().minute())
 
                 if let volume = workout.volume {

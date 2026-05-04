@@ -30,7 +30,7 @@ struct WorkoutHistoryChartView: View {
 
     private var recentWorkouts: [Workout] {
         workouts.filter { workout in
-            workout.timestamp >= startDate && workout.timestamp <= endDate
+            workout.isCompleted && workout.timestamp >= startDate && workout.timestamp <= endDate
         }
     }
 
